@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stake Panel</title>
+    <style>
+        body {
+            background-color: #2d3748;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            background-color: #1a202c;
+            width: 100%;
+            padding: 1rem;
+        }
+        .logo img {
+            width: 64px;
+            height: 48px;
+            border-radius: 1rem;
+        }
+        .balance {
+            display: flex;
+            align-items: center;
+        }
+        .balance span {
+            margin-right: 0.5rem;
+            font-size: 1.125rem;
+        }
+        .deposit-btn {
+            background-color: #4299e1;
+            padding: 0.5rem;
+            margin-left: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            padding: 1rem;
+            background-color: #1a202c;
+        }
+        .grid button {
+            width: 48px;
+            height: 48px;
+            border: 2px solid;
+            border-radius: 0.5rem;
+        }
+        .grid button.mine {
+            background-color: #e53e3e;
+        }
+        .grid button.open {
+            background-color: #48bb78;
+        }
+        .grid button.closed {
+            background-color: #4a5568;
+        }
+        .bet-panel {
+            background-color: #1a202c;
+            padding: 1rem;
+            width: 100%;
+        }
+        .bet-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            border: 2px solid #d69e2e;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+        }
+        .bet-input input {
+            background-color: #2d3748;
+            color: white;
+            border: 1px solid #4a5568;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            width: 100%;
+        }
+        .bet-input .btc-icon {
+            color: #d69e2e;
+            font-size: 1.5rem;
+            margin-left: 0.5rem;
+        }
+        .bet-buttons {
+            display: flex;
+            width: 100%;
+        }
+        .bet-buttons button {
+            width: 33.33%;
+            background-color: #48bb78;
+            padding: 0.5rem;
+            margin: 0.25rem;
+            border-radius: 0.5rem;
+        }
+        .bet-buttons button.disabled {
+            background-color: #4a5568;
+        }
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+        }
+        .btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #000;
+            text-decoration: none;
+            padding: 0.5rem;
+        }
+        .btn span {
+            font-size: 0.75rem;
+        }
+        .center-btn {
+            background-color: #e53e3e;
+            color: #fff;
+            border-radius: 50%;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <img src="logohunter.png" alt="Logo">
+        </div>
+        <div class="balance">
+            <span id="balance">20000</span>
+            <span class="currency">€</span>
+            <button class="deposit-btn" onclick="navigateToDeposit()">Deposit</button>
+        </div>
+    </div>
+    <div class="grid" id="grid">
+        <!-- Buttons will be dynamically created here -->
+    </div>
+    <div class="bet-panel">
+        <div class="bet-input">
+            <input type="number" id="betAmount" placeholder="0.00000000" oninput="updateBetAmount()">
+            <span class="btc-icon">₿</span>
+        </div>
+        <div class="bet-buttons">
+            <button id="cashoutBtn" onclick="handleCashout()">Cashout</button>
+            <button id="betBtn" onclick="handleBet()">Bet</button>
+        </div>
+    </div>
+    <div class="footer">
+        <footer>
+            <a href="/promotion" class="btn">
+                <span>&#9829;</span>
+                <span>Promotion</span>
+            </a>
+            <a href="/activity" class="btn">
+                <span>&#127873;</span>
+                <span>Activity</span>
+            </a>
+            <div class="center-btn" onclick="window.location.href='/'">
+                <span>&#127183;</span>
+            </div>
+            <a href="/wallet" class="btn">
+                <span>&#128176;</span>
+                <span>Wallet</span>
+            </a>
+            <a href="/account" class="btn">
+                <span>&#128100;</span>
+                <span>Account</span>
+            </a>
+        </footer>
+    </div>
+    <script>
+        const GRID_SIZE = 5;
+        const MINES = 3;
+        let balance = 20000;
+        let betAmount = "";
+        let cashOutAmount = 0;
+        let successfulOpens = 0;
+        let mines = [];
+        let betLocked = false;
+        let betPlaced = false;
+        let buttons = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('-'));
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initializeGame();
+        });
+
+        function initializeGame() {
+            successfulOpens = 0;
+            cashOutAmount = 0;
+            betLocked = false;
+            betPlaced = false;
+            buttons = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('-'));
+            mines = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false));
+            placeMines();
+            createGrid();
+        }
+
+        function placeMines() {
+            let count = 0;
+            while (count < MINES) {
+                const x = Math.floor(Math.random() * GRID_SIZE);
+                const y = Math.floor(Math.random() * GRID_SIZE);
+                if (!mines[x][y]) {
+                    mines[x][y] = true;
+                    count++;
+                }
+            }
+        }
+
+        function createGrid() {
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const button = document.createElement("button");
+                    button.className = "closed";
+                    button.onclick = () => handleButtonClick(i, j);
+                    grid.appendChild(button);
+                    buttons[i][j] = button;
+                }
+            }
+        }
+
+        function handleButtonClick(row, col) {
+            if (!betPlaced) return;
+            if (mines[row][col]) {
+                buttons[row][col].className = "mine";
+                endGame(false);
+            } else {
+                if (buttons[row][col].className === "open") return;
+                buttons[row][col].className = "open";
+                successfulOpens++;
+                updateCashOutAmount();
+                const maxOpens = betAmount < 500 ? 4 : 6;
+                if (successfulOpens === maxOpens) {
+                    forceMineHit();
+                }
+            }
+        }
+
+        function endGame(won) {
+            betLocked = false;
+            betPlaced = false;
+            if (won) {
+                alert(`You won! Your new balance is: ₹${balance}`);
+            } else {
+                revealAllMines();
+            }
+            setTimeout(initializeGame, 2000);
+        }
+
+        function revealAllMines() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (mines[i][j]) {
+                        buttons[i][j].className = "mine";
+                    }
+                }
+            }
+        }
+
+        function forceMineHit() {
+            let x, y;
+            const newMines = mines.slice();
+            newMines[x][y] = true;
+            mines = newMines;
+        }
+
+        function updateCashOutAmount() {
+            cashOutAmount += parseFloat(betAmount) * 0.09;
+        }
+
+        function handleBet() {
+            betAmount = parseFloat(document.getElementById("betAmount").value);
+            if (betAmount > balance) {
+                alert('Insufficient funds! Please deposit money to play.');
+                return;
+            }
+            balance -= betAmount;
+            betPlaced = true;
+            betLocked = true;
+            cashOutAmount = 0;
+        }
+
+        function handleCashout() {
+            if (betPlaced) {
+                balance += betAmount + cashOutAmount;
+                betLocked = false;
+                betPlaced = false;
+                initializeGame();
+            }
+        }
+
+        function updateBetAmount() {
+            betAmount = document.getElementById("betAmount").value;
+        }
+
+        function navigateToDeposit() {
+            window.location.href = "/account/deposit";
+        }
+    </script>
+</body>
+</html>
